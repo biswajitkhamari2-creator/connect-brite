@@ -62,7 +62,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (text) {
     try { data = JSON.parse(text); } catch { data = { error: text }; }
   }
-  if (!res.ok) {
+  if (!res.ok || (data && data.success === false) || (data && data.error)) {
     const msg = (data && (data.error || data.message)) || `HTTP ${res.status}`;
     const err = new Error(msg) as Error & { status?: number; data?: unknown };
     err.status = res.status;
@@ -91,8 +91,10 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ email, password }),
       }).then((r) => {
-        setToken(r.data.token);
-        localStorage.setItem("cfs_user", JSON.stringify(r.data.user));
+        if (r?.data?.token) {
+          setToken(r.data.token);
+          localStorage.setItem("cfs_user", JSON.stringify(r.data.user));
+        }
         return r;
       }),
 
