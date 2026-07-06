@@ -45,7 +45,7 @@ function PostPaymentAgreement() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return toast.error("Session expired."); }
     let ip = "";
-    try { ip = (await (await fetch("https://api.ipify.org?format=json")).json()).ip || ""; } catch {}
+    try { ip = (await (await fetch("https://api.ipify.org?format=json")).json())?.ip || ""; } catch {}
     const { error } = await supabase.from("agreement_acceptances").insert({
       user_id: user.id,
       agreement_version: AGREEMENT_VERSION,

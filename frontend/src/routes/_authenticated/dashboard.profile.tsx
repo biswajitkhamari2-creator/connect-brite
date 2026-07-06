@@ -31,7 +31,7 @@ function ProfilePage() {
       // Refresh from backend
       try {
         const res = await api.auth.me();
-        const u = res.data?.user;
+        const u = res?.data?.user ?? res?.user;
         if (u) {
           setUser(u);
           setFullName(u.full_name ?? "");
