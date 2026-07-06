@@ -39,10 +39,15 @@ RateLimitMiddleware::check('global:' . Request::clientIp(), 120, 60);
 
 $method = $_SERVER['REQUEST_METHOD'];
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-
-// Clean "/api" subfolder prefix if present in the path for Namecheap compatibility
-$uri = preg_replace('/^\/api/', '', $uri);
 $uri = rtrim($uri, '/') ?: '/';
+
+// Universal route prefix normalizer (ensures paths start with /api to match route keys)
+if (!str_starts_with($uri, '/api')) {
+    // If request contains index.php inside path, strip it
+    $uri = str_replace('/index.php', '', $uri);
+    $uri = '/api' . $uri;
+}
+$uri = rtrim($uri, '/') ?: '/api';
 
 $routes = require $baseDir . '/routes/api.php';
 $adminRoutesFile = $baseDir . '/routes/admin.php';
@@ -61,4 +66,4 @@ foreach ($routes as $pattern => $handler) {
         exit;
     }
 }
-Response::error('Route not found', 404);
+Response::error('Route not found: ' . $method . ' ' . $uri, 404);
