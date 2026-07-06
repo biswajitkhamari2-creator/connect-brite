@@ -1,0 +1,63 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { LegalPage, Section, P, Callout } from "@/components/LegalPage";
+
+export const Route = createFileRoute("/disclaimer")({
+  head: () => ({
+    meta: [
+      { title: "Disclaimer — ClaimForSure" },
+      { name: "description", content: "Official communication channels and service disclaimers for ClaimForSure." },
+      { property: "og:title", content: "Disclaimer — ClaimForSure" },
+      { property: "og:url", content: "https://connect-brite.lovable.app/disclaimer" },
+    ],
+    links: [{ rel: "canonical", href: "https://connect-brite.lovable.app/disclaimer" }],
+  }),
+  component: DisclaimerPage,
+});
+
+function DisclaimerPage() {
+  return (
+    <LegalPage title="Disclaimer" updated="January 2026">
+      <Callout tone="warning">
+        <h2 className="font-serif text-xl font-bold">⚠️ Important Communication Notice</h2>
+        <p className="mt-3">
+          Claim For Sure is a branch of <strong>Sidheswar Enterprises</strong>, registered under the
+          Government of India's Udyam portal.
+        </p>
+        <p className="mt-1">
+          <strong>Udyam Registration Number:</strong> UDYAM-OD-29-0025578
+        </p>
+        <p className="mt-3 font-semibold">
+          Claim For Sure currently operates ONLY through the following official channels:
+        </p>
+        <ul className="ml-5 mt-2 list-disc space-y-1">
+          <li><strong>Email:</strong> support@claimforsure.in</li>
+          <li><strong>Phone:</strong> +91 94395 72073 / +91 94384 63174</li>
+          <li><strong>WhatsApp:</strong> +91 94395 72073</li>
+        </ul>
+      </Callout>
+
+      <Section title="Service Limitations">
+        <P>Claim For Sure does not provide insurance, underwriting, or policy issuance services.</P>
+      </Section>
+
+      <Section title="No Guarantee">
+        <P>We do not guarantee claim approval or settlement amounts.</P>
+      </Section>
+
+      <Section title="Basis of Assistance">
+        <P>All assistance is based on information provided by users and standard industry practices.</P>
+      </Section>
+
+      <Section title="Final Decisions">
+        <P>Final decisions always rest with insurance companies, regulators, or legal authorities.</P>
+      </Section>
+
+      <Section title="Limitation of Liability">
+        <P>
+          By using this platform, users agree that Claim For Sure shall not be held liable for claim
+          outcomes, delays, or insurer decisions.
+        </P>
+      </Section>
+    </LegalPage>
+  );
+}
