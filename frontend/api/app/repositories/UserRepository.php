@@ -7,7 +7,8 @@ final class UserRepository
     {
         $s = $this->db->prepare('SELECT * FROM users WHERE email = ? LIMIT 1');
         $s->execute([$email]);
-        return $s->fetch() ?: null;
+        $row = $s->fetch();
+        return $row === false ? null : $row;
     }
     public function findById(int $id): ?array
     {

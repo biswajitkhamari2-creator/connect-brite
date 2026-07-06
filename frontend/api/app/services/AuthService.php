@@ -13,7 +13,11 @@ final class AuthService
             ->indianMobile('phone');
         if ($v->fails()) Response::error('Validation failed', 422, $v->errors());
         $email = strtolower(trim($in['email']));
-        if ($this->users->findByEmail($email)) Response::error('Email already registered', 409);
+
+        $existing = $this->users->findByEmail($email);
+        if ($existing !== null && !empty($existing['id'])) {
+            Response::error('Email already registered', 409);
+        }
         $id = $this->users->create([
             'uuid' => self::uuid4(), 'full_name' => trim($in['full_name']), 'email' => $email,
             'phone' => !empty($in['phone']) ? $in['phone'] : null,
