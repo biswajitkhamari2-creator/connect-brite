@@ -13,8 +13,16 @@ const InputSchema = z.object({
 export const sendMail = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => InputSchema.parse(data))
   .handler(async ({ data }) => {
-    const DEFAULT_API_BASE_URL = "http://localhost:8000";
-    const BASE = "http://localhost:8000";
+    const getApiBaseUrl = (): string => {
+      if (typeof window !== "undefined" && window.location.hostname) {
+        const host = window.location.hostname;
+        const isLocal = host === "localhost" || host === "127.0.0.1" || host.startsWith("192.168.") || host.startsWith("10.");
+        if (!isLocal) return "";
+        return `http://${host}:8000`;
+      }
+      return "http://localhost:8000";
+    };
+    const BASE = getApiBaseUrl();
     
     let token = "";
     if (typeof window !== "undefined") {
