@@ -90,10 +90,12 @@ export const api = {
       request<{ status: string; message: string; data: { token: string; user: AuthUser } }>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
-      }).then((r) => {
-        if (r?.data?.token) {
-          setToken(r.data.token);
-          localStorage.setItem("cfs_user", JSON.stringify(r.data.user));
+      }).then((r: any) => {
+        const token = r?.data?.token ?? r?.token;
+        const user = r?.data?.user ?? r?.user;
+        if (token) {
+          setToken(token);
+          localStorage.setItem("cfs_user", JSON.stringify(user));
         }
         return r;
       }),

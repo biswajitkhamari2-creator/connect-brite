@@ -188,8 +188,8 @@ export const supabase = {
           email: credentials.email,
           password: credentials.password,
         });
-        const token = res.data?.token;
-        const user = res.data?.user;
+        const token = res?.data?.token ?? res?.token;
+        const user = res?.data?.user ?? res?.user;
         if (token) {
           setToken(token);
           if (user) {
@@ -212,7 +212,7 @@ export const supabase = {
           phone: b.options?.data?.phone || "",
         };
         const res = await request<any>("/api/auth/register", payload);
-        const user = res.data?.user;
+        const user = res?.data?.user ?? res?.user;
         if (user) {
           user.id = String(user.id);
         }
