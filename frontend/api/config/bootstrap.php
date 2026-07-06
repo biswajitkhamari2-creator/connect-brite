@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 error_reporting(E_ALL);
-ini_set('display_errors', '0');
+ini_set('display_errors', '1'); // Enable displaying errors for debugging
 
 $envPath = dirname(__DIR__) . '/.env';
 if (file_exists($envPath)) {
@@ -36,6 +36,15 @@ if (file_exists(APP_ROOT . '/vendor/autoload.php')) {
 }
 
 set_exception_handler(function (Throwable $e): void {
-    Logger::error($e->getMessage(), ['trace' => $e->getTraceAsString()]);
-    Response::error('Internal server error', 500);
+    // Graceful logging: print exception directly to browser for live debugging on Vercel
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'success' => false,
+        'message' => 'Exception occurred: ' . $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+        'trace' => explode("\n", $e->getTraceAsString())
+    ], JSON_PRETTY_PRINT);
+    exit;
 });
