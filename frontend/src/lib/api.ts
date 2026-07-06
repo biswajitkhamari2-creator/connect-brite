@@ -2,15 +2,15 @@
 // Routes match exactly what the PHP backend exposes.
 
 const getApiBaseUrl = (): string => {
-  const envUrl = import.meta.env.VITE_API_BASE_URL as string | undefined;
-  let url = envUrl || "http://localhost:8000";
   if (typeof window !== "undefined" && window.location.hostname) {
     const host = window.location.hostname;
-    if (host !== "localhost" && host !== "127.0.0.1") {
-      url = url.replace("localhost", host).replace("127.0.0.1", host);
+    const isLocal = host === "localhost" || host === "127.0.0.1" || host.startsWith("192.168.") || host.startsWith("10.");
+    if (!isLocal) {
+      return ""; // Relative path /api in production
     }
+    return `http://${host}:8000`;
   }
-  return url.replace(/\/$/, "");
+  return "http://localhost:8000";
 };
 const BASE = getApiBaseUrl();
 const TOKEN_KEY = "cfs_token";
