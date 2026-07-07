@@ -44,6 +44,16 @@ set_error_handler(function (int $severity, string $message, string $file, int $l
 
 set_exception_handler(function (Throwable $e): void {
     Logger::error($e->getMessage(), ['trace' => $e->getTraceAsString()]);
-    $code = $e instanceof ErrorException ? 500 : 500;
     Response::error($e->getMessage(), 500);
+});
+
+register_shutdown_function(function (): void {
+    $error = error_get_last();
+    if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        Logger::error($error['message'], ['file' => $error['file'], 'line' => $error['line']]);
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        Response::error($error['message'], 500);
+    }
 });
