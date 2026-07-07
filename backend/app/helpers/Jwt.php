@@ -4,9 +4,17 @@ final class Jwt
 {
     private static function b64(string $d): string { return rtrim(strtr(base64_encode($d), '+/', '-_'), '='); }
     private static function b64d(string $d): string { return base64_decode(strtr($d, '-_', '+/')); }
+    private static function getSecret(): string
+    {
+        $secret = $_ENV['JWT_SECRET'] ?? $_SERVER['JWT_SECRET'] ?? getenv('JWT_SECRET') ?? '';
+        if ($secret === '') {
+            throw new RuntimeException('JWT_SECRET missing');
+        }
+        return $secret;
+    }
     public static function encode(array $payload, int $ttl = JWT_TTL): string
     {
-        $secret = $_ENV['JWT_SECRET'] ?? throw new RuntimeException('JWT_SECRET missing');
+        $secret = self::getSecret();
         $header = self::b64(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
         $now = time();
         $payload['iat'] = $now; $payload['exp'] = $now + $ttl;
@@ -19,7 +27,11 @@ final class Jwt
         $parts = explode('.', $token);
         if (count($parts) !== 3) return null;
         [$h, $b, $s] = $parts;
-        $secret = $_ENV['JWT_SECRET'] ?? '';
+        try {
+            $secret = self::getSecret();
+        } catch (RuntimeException $e) {
+            return null;
+        }
         $expected = self::b64(hash_hmac('sha256', "{$h}.{$b}", $secret, true));
         if (!hash_equals($expected, $s)) return null;
         $payload = json_decode(self::b64d($b), true);
