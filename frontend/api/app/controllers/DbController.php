@@ -133,6 +133,11 @@ final class DbController
                 if (isset($row['id'])) {
                     $row['id'] = (string)$row['id'];
                 }
+                if (isset($row['claim_number'])) {
+                    $row['claim_id'] = (string)$row['claim_number'];
+                } elseif (isset($row['claim_id'])) {
+                    $row['claim_number'] = (string)$row['claim_id'];
+                }
             }
 
             // Dynamically populate documents list from documents table if query is claims
