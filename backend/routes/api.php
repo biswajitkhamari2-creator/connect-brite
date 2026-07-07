@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 return [
+    'GET /api/health'                => ['HealthController', 'check'],
     'POST /api/auth/register'        => ['AuthController', 'register'],
     'POST /api/auth/login'           => ['AuthController', 'login'],
     'POST /api/auth/logout'          => ['AuthController', 'logout'],

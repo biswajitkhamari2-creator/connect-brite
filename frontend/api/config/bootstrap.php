@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 error_reporting(E_ALL);
-ini_set('display_errors', '1'); // Enable displaying errors for debugging
+ini_set('display_errors', '0');
 
 $envPath = dirname(__DIR__) . '/.env';
 if (file_exists($envPath)) {
@@ -35,16 +35,15 @@ if (file_exists(APP_ROOT . '/vendor/autoload.php')) {
     require_once APP_ROOT . '/vendor/autoload.php';
 }
 
+set_error_handler(function (int $severity, string $message, string $file, int $line): void {
+    if (!(error_reporting() & $severity)) {
+        return;
+    }
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+
 set_exception_handler(function (Throwable $e): void {
-    // Graceful logging: print exception directly to browser for live debugging on Vercel
-    http_response_code(500);
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode([
-        'success' => false,
-        'message' => 'Exception occurred: ' . $e->getMessage(),
-        'file' => $e->getFile(),
-        'line' => $e->getLine(),
-        'trace' => explode("\n", $e->getTraceAsString())
-    ], JSON_PRETTY_PRINT);
-    exit;
+    Logger::error($e->getMessage(), ['trace' => $e->getTraceAsString()]);
+    $code = $e instanceof ErrorException ? 500 : 500;
+    Response::error($e->getMessage(), 500);
 });

@@ -35,7 +35,15 @@ if (file_exists(APP_ROOT . '/vendor/autoload.php')) {
     require_once APP_ROOT . '/vendor/autoload.php';
 }
 
+set_error_handler(function (int $severity, string $message, string $file, int $line): void {
+    if (!(error_reporting() & $severity)) {
+        return;
+    }
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+
 set_exception_handler(function (Throwable $e): void {
     Logger::error($e->getMessage(), ['trace' => $e->getTraceAsString()]);
-    Response::error('Internal server error', 500);
+    $code = $e instanceof ErrorException ? 500 : 500;
+    Response::error($e->getMessage(), 500);
 });
