@@ -20,8 +20,16 @@ final class Database
             ];
             
             if ($host !== '127.0.0.1' && $host !== 'localhost') {
-                $options[PDO::MYSQL_ATTR_SSL_CA] = '';
-                $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+                $sslCaKey = defined('Pdo\\Mysql::ATTR_SSL_CA') 
+                    ? constant('Pdo\\Mysql::ATTR_SSL_CA') 
+                    : (defined('PDO::MYSQL_ATTR_SSL_CA') ? PDO::MYSQL_ATTR_SSL_CA : 1009);
+                    
+                $sslVerifyKey = defined('Pdo\\Mysql::ATTR_SSL_VERIFY_SERVER_CERT') 
+                    ? constant('Pdo\\Mysql::ATTR_SSL_VERIFY_SERVER_CERT') 
+                    : (defined('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT') ? PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT : 1014);
+
+                $options[$sslCaKey] = '';
+                $options[$sslVerifyKey] = false;
             }
             
             self::$instance = new PDO($dsn, $user, $pass, $options);
