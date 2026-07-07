@@ -6,6 +6,7 @@ return [
     'POST /api/auth/login'           => ['AuthController', 'login'],
     'POST /api/auth/logout'          => ['AuthController', 'logout'],
     'GET /api/auth/me'               => ['AuthController', 'me'],
+    'POST /api/auth/me'              => ['AuthController', 'me'],
     
     // Generic Database & RPC Proxy
     'POST /api/db/query'             => ['DbController', 'query'],
