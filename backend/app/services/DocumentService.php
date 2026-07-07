@@ -17,9 +17,21 @@ final class DocumentService
         if (!isset($file['error']) || is_array($file['error'])) Response::error('Invalid upload', 422);
         if ($file['error'] !== UPLOAD_ERR_OK) Response::error('Upload failed code ' . $file['error'], 422);
         if ($file['size'] > MAX_UPLOAD_SIZE) Response::error('File exceeds max size of 5MB', 422);
-        $finfo = new finfo(FILEINFO_MIME_TYPE);
-        $mime = $finfo->file($file['tmp_name']);
-        if (!isset(ALLOWED_MIME[$mime])) Response::error('File type not allowed', 422);
+        $mime = $file['type'] ?? 'application/octet-stream';
+        if (class_exists('finfo')) {
+            try {
+                $finfo = new finfo(FILEINFO_MIME_TYPE);
+                $detected = $finfo->file($file['tmp_name']);
+                if ($detected) {
+                    $mime = $detected;
+                }
+            } catch (Exception $e) {
+                // Ignore finfo errors and use fallback
+            }
+        }
+        if (!isset(ALLOWED_MIME[$mime])) {
+            Response::error('File type not allowed: ' . $mime, 422);
+        }
         $ext = ALLOWED_MIME[$mime];
         $storedName = bin2hex(random_bytes(16)) . '.' . $ext;
         $targetDir = UPLOAD_DIR . '/' . $claimId;

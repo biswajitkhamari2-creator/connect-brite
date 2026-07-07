@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS claims (
     insurer_name VARCHAR(150) NULL,
     policy_number VARCHAR(100) NULL,
     claim_amount DECIMAL(12,2) NULL,
-    status ENUM('submitted','under_review','pending_docs','escalated','resolved','rejected','closed') NOT NULL DEFAULT 'submitted',
+    status ENUM('submitted','under_review','pending_docs','escalated','resolved','rejected','closed','pending','in-review','expert-review','more-documents-required','approved') NOT NULL DEFAULT 'submitted',
     priority ENUM('low','medium','high','urgent') NOT NULL DEFAULT 'medium',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
