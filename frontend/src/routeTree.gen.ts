@@ -16,6 +16,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RefundRouteImport } from './routes/refund'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PoliciesRouteImport } from './routes/policies'
+import { Route as MentorRouteImport } from './routes/mentor'
 import { Route as InsuranceClaimRejectedRouteImport } from './routes/insurance-claim-rejected'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
@@ -34,6 +35,8 @@ import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 import { Route as AuthResetRouteImport } from './routes/auth.reset'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AuthForgotRouteImport } from './routes/auth.forgot'
+import { Route as ApiMentorRouteImport } from './routes/api/mentor'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AdminRewardsRouteImport } from './routes/admin.rewards'
 import { Route as AdminPromocodesRouteImport } from './routes/admin.promocodes'
 import { Route as AdminPayoutsRouteImport } from './routes/admin.payouts'
@@ -85,6 +88,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const PoliciesRoute = PoliciesRouteImport.update({
   id: '/policies',
   path: '/policies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MentorRoute = MentorRouteImport.update({
+  id: '/mentor',
+  path: '/mentor',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InsuranceClaimRejectedRoute = InsuranceClaimRejectedRouteImport.update({
@@ -174,6 +182,16 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
 const AuthForgotRoute = AuthForgotRouteImport.update({
   id: '/auth/forgot',
   path: '/auth/forgot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMentorRoute = ApiMentorRouteImport.update({
+  id: '/api/mentor',
+  path: '/api/mentor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRewardsRoute = AdminRewardsRouteImport.update({
@@ -283,6 +301,7 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/how-it-works': typeof HowItWorksRoute
   '/insurance-claim-rejected': typeof InsuranceClaimRejectedRoute
+  '/mentor': typeof MentorRoute
   '/policies': typeof PoliciesRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
@@ -297,6 +316,8 @@ export interface FileRoutesByFullPath {
   '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/promocodes': typeof AdminPromocodesRoute
   '/admin/rewards': typeof AdminRewardsRoute
+  '/api/chat': typeof ApiChatRoute
+  '/api/mentor': typeof ApiMentorRoute
   '/auth/forgot': typeof AuthForgotRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/reset': typeof AuthResetRoute
@@ -326,6 +347,7 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/how-it-works': typeof HowItWorksRoute
   '/insurance-claim-rejected': typeof InsuranceClaimRejectedRoute
+  '/mentor': typeof MentorRoute
   '/policies': typeof PoliciesRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
@@ -340,6 +362,8 @@ export interface FileRoutesByTo {
   '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/promocodes': typeof AdminPromocodesRoute
   '/admin/rewards': typeof AdminRewardsRoute
+  '/api/chat': typeof ApiChatRoute
+  '/api/mentor': typeof ApiMentorRoute
   '/auth/forgot': typeof AuthForgotRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/reset': typeof AuthResetRoute
@@ -371,6 +395,7 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/how-it-works': typeof HowItWorksRoute
   '/insurance-claim-rejected': typeof InsuranceClaimRejectedRoute
+  '/mentor': typeof MentorRoute
   '/policies': typeof PoliciesRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
@@ -385,6 +410,8 @@ export interface FileRoutesById {
   '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/promocodes': typeof AdminPromocodesRoute
   '/admin/rewards': typeof AdminRewardsRoute
+  '/api/chat': typeof ApiChatRoute
+  '/api/mentor': typeof ApiMentorRoute
   '/auth/forgot': typeof AuthForgotRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/reset': typeof AuthResetRoute
@@ -416,6 +443,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/how-it-works'
     | '/insurance-claim-rejected'
+    | '/mentor'
     | '/policies'
     | '/privacy'
     | '/refund'
@@ -430,6 +458,8 @@ export interface FileRouteTypes {
     | '/admin/payouts'
     | '/admin/promocodes'
     | '/admin/rewards'
+    | '/api/chat'
+    | '/api/mentor'
     | '/auth/forgot'
     | '/auth/login'
     | '/auth/reset'
@@ -459,6 +489,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/how-it-works'
     | '/insurance-claim-rejected'
+    | '/mentor'
     | '/policies'
     | '/privacy'
     | '/refund'
@@ -473,6 +504,8 @@ export interface FileRouteTypes {
     | '/admin/payouts'
     | '/admin/promocodes'
     | '/admin/rewards'
+    | '/api/chat'
+    | '/api/mentor'
     | '/auth/forgot'
     | '/auth/login'
     | '/auth/reset'
@@ -503,6 +536,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/how-it-works'
     | '/insurance-claim-rejected'
+    | '/mentor'
     | '/policies'
     | '/privacy'
     | '/refund'
@@ -517,6 +551,8 @@ export interface FileRouteTypes {
     | '/admin/payouts'
     | '/admin/promocodes'
     | '/admin/rewards'
+    | '/api/chat'
+    | '/api/mentor'
     | '/auth/forgot'
     | '/auth/login'
     | '/auth/reset'
@@ -548,6 +584,7 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   HowItWorksRoute: typeof HowItWorksRoute
   InsuranceClaimRejectedRoute: typeof InsuranceClaimRejectedRoute
+  MentorRoute: typeof MentorRoute
   PoliciesRoute: typeof PoliciesRoute
   PrivacyRoute: typeof PrivacyRoute
   RefundRoute: typeof RefundRoute
@@ -562,6 +599,8 @@ export interface RootRouteChildren {
   AdminPayoutsRoute: typeof AdminPayoutsRoute
   AdminPromocodesRoute: typeof AdminPromocodesRoute
   AdminRewardsRoute: typeof AdminRewardsRoute
+  ApiChatRoute: typeof ApiChatRoute
+  ApiMentorRoute: typeof ApiMentorRoute
   AuthForgotRoute: typeof AuthForgotRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthResetRoute: typeof AuthResetRoute
@@ -620,6 +659,13 @@ declare module '@tanstack/react-router' {
       path: '/policies'
       fullPath: '/policies'
       preLoaderRoute: typeof PoliciesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mentor': {
+      id: '/mentor'
+      path: '/mentor'
+      fullPath: '/mentor'
+      preLoaderRoute: typeof MentorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/insurance-claim-rejected': {
@@ -746,6 +792,20 @@ declare module '@tanstack/react-router' {
       path: '/auth/forgot'
       fullPath: '/auth/forgot'
       preLoaderRoute: typeof AuthForgotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/mentor': {
+      id: '/api/mentor'
+      path: '/api/mentor'
+      fullPath: '/api/mentor'
+      preLoaderRoute: typeof ApiMentorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/rewards': {
@@ -914,6 +974,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   HowItWorksRoute: HowItWorksRoute,
   InsuranceClaimRejectedRoute: InsuranceClaimRejectedRoute,
+  MentorRoute: MentorRoute,
   PoliciesRoute: PoliciesRoute,
   PrivacyRoute: PrivacyRoute,
   RefundRoute: RefundRoute,
@@ -928,6 +989,8 @@ const rootRouteChildren: RootRouteChildren = {
   AdminPayoutsRoute: AdminPayoutsRoute,
   AdminPromocodesRoute: AdminPromocodesRoute,
   AdminRewardsRoute: AdminRewardsRoute,
+  ApiChatRoute: ApiChatRoute,
+  ApiMentorRoute: ApiMentorRoute,
   AuthForgotRoute: AuthForgotRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthResetRoute: AuthResetRoute,

@@ -179,6 +179,65 @@ export const api = {
         `/api/admin/claims?page=${page}${status ? `&status=${encodeURIComponent(status)}` : ""}`,
       ),
   },
+
+  ollama: {
+    /** POST /api/chat - Non-streaming chat endpoint */
+    chat: (messages: { role: string; content: string }[], model?: string) =>
+      request<any>("/api/chat", {
+        method: "POST",
+        body: JSON.stringify({ messages, model, stream: false }),
+      }),
+
+    /** POST /api/chat - Streaming chat helper */
+    chatStream: async (
+      messages: { role: string; content: string }[],
+      onChunk: (text: string) => void,
+      model?: string
+    ): Promise<void> => {
+      const headers = new Headers();
+      headers.set("Content-Type", "application/json");
+      const t = getToken();
+      if (t) headers.set("Authorization", `Bearer ${t}`);
+
+      const res = await fetch(`${BASE}/api/chat`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ messages, model, stream: true }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) return;
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const parsed = JSON.parse(line);
+            const chunkText = parsed?.message?.content || "";
+            if (chunkText) {
+              onChunk(chunkText);
+            }
+          } catch (e) {
+            // Ignored, might be incomplete JSON
+          }
+        }
+      }
+    },
+  },
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────

@@ -1,0 +1,34 @@
+export async function searchWeb(query: string, maxResults = 3): Promise<string> {
+  const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
+    });
+    const html = await res.text();
+    // Parse the HTML using regex to find result__snippet and result__title
+    const snippetMatches = Array.from(html.matchAll(/<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g));
+    const titleMatches = Array.from(html.matchAll(/<a class="result__url"[^>]*>([\s\S]*?)<\/a>/g));
+    
+    const snippets: string[] = [];
+    const count = Math.min(maxResults, snippetMatches.length);
+    
+    for (let i = 0; i < count; i++) {
+      const snippet = snippetMatches[i][1].replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+      const title = titleMatches[i] ? titleMatches[i][1].replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim() : "Search Result";
+      if (snippet) {
+        snippets.push(`Result ${i + 1}: ${title}\nContext: ${snippet}`);
+      }
+    }
+    
+    if (snippets.length === 0) {
+      return "No real-time search context found.";
+    }
+    
+    return snippets.join("\n\n");
+  } catch (err) {
+    console.error("Search verification error:", err);
+    return "Search service temporarily unavailable.";
+  }
+}
