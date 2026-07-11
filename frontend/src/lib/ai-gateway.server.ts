@@ -6,7 +6,10 @@ const RUN_ID_HEADER = "X-AI-Run-ID";
 
 export function createGateway(initialRunId?: string) {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
-  const ollamaUrl = process.env.OLLAMA_API_URL?.trim() || "http://localhost:11434/v1";
+  let ollamaUrl = process.env.OLLAMA_API_URL?.trim() || "http://localhost:11434/v1";
+  if (!ollamaUrl.endsWith("/v1")) {
+    ollamaUrl = ollamaUrl.replace(/\/+$/, "") + "/v1";
+  }
 
   let runId = initialRunId?.trim() || undefined;
   let resolveRunId: (value: string | undefined) => void = () => {};
@@ -48,7 +51,10 @@ export function createGateway(initialRunId?: string) {
 }
 
 export function createOllamaGateway(initialRunId?: string) {
-  const ollamaUrl = process.env.OLLAMA_API_URL?.trim() || "http://localhost:11434/v1";
+  let ollamaUrl = process.env.OLLAMA_API_URL?.trim() || "http://localhost:11434/v1";
+  if (!ollamaUrl.endsWith("/v1")) {
+    ollamaUrl = ollamaUrl.replace(/\/+$/, "") + "/v1";
+  }
 
   let runId = initialRunId?.trim() || undefined;
   let resolveRunId: (value: string | undefined) => void = () => {};
