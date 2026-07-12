@@ -1,17 +1,26 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, type UIMessage } from "ai";
+import type { UIMessage } from "ai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowLeft, Check, Copy, FileText, ImageIcon, Mic, MicOff, Paperclip, RefreshCw, Send, Sparkles, Square, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowLeft, Check, Copy, FileText, ImageIcon, Mic, MicOff, Paperclip, RefreshCw, Send, Server, Sparkles, Square, Volume2, VolumeX, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { BrandMark } from "@/components/brand-mark";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getFastApiBase, setFastApiBase, isMixedContentBlocked } from "@/lib/fastapi";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
-export const Route = createFileRoute("/mentor")({
+export const Route = createFileRoute("/_authenticated/mentor")({
   validateSearch: (s: Record<string, unknown>) => ({ seed: typeof s.seed === "string" ? s.seed : undefined }),
   head: () => ({
     meta: [
@@ -58,6 +67,16 @@ function friendlyMentorError(message?: string): string {
   if (!raw) return "AI Mentor could not answer right now. Please retry.";
   const lower = raw.toLowerCase();
 
+  if (lower.includes("mixed content") || lower.includes("browser is on https")) {
+    return raw;
+  }
+  if (lower.includes("failed to fetch") || lower.includes("networkerror") || lower.includes("load failed")) {
+    const base = getFastApiBase();
+    if (typeof window !== "undefined" && window.location.protocol === "https:" && base.startsWith("http://")) {
+      return `The preview runs on HTTPS but your backend URL (${base}) is HTTP. Browsers block that. Expose your backend via an HTTPS tunnel (e.g. ngrok) and paste the HTTPS URL in the Backend URL setting.`;
+    }
+    return `AI Mentor could not reach the backend at ${base}. Make sure the Python FastAPI server is running and CORS is enabled.`;
+  }
   if (lower.includes("<!doctype") || lower.includes("<html") || lower.includes("this page didn't load")) {
     return "AI Mentor service did not load correctly. Please retry.";
   }
@@ -73,7 +92,7 @@ function friendlyMentorError(message?: string): string {
 type Attachment = { id: string; name: string; mediaType: string; url: string; size: number };
 
 const ACCEPTED_TYPES = "application/pdf,image/png,image/jpeg,image/webp,image/gif";
-const MAX_FILE_BYTES = 15 * 1024 * 1024; // 15MB per file
+const MAX_FILE_BYTES = 100 * 1024 * 1024; // 100MB per file (Cloudflare Workers request body limit)
 const MAX_FILES = 4;
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -92,11 +111,180 @@ const STARTERS = [
   "What current affairs themes are likely in GS2 this year?",
 ];
 
+type ChatStatus = "ready" | "submitted" | "streaming" | "error";
+type SendPart = { type: "text"; text: string } | { type: "file"; mediaType: string; url: string; filename?: string };
+type SendPayload = { role: "user"; parts: SendPart[] };
+
+function makeId() {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function partsToText(parts: SendPart[]): string {
+  return parts.filter((p): p is Extract<SendPart, { type: "text" }> => p.type === "text").map((p) => p.text).join("\n");
+}
+
+function extractReply(payload: unknown): string {
+  if (payload == null) return "";
+  if (typeof payload === "string") return payload;
+  if (typeof payload === "object") {
+    const obj = payload as Record<string, unknown>;
+    for (const key of ["reply", "response", "answer", "message", "text", "content", "output"]) {
+      const v = obj[key];
+      if (typeof v === "string" && v.trim()) return v;
+    }
+    if (Array.isArray(obj.choices) && obj.choices.length > 0) {
+      const c = obj.choices[0] as { message?: { content?: unknown }; text?: unknown };
+      if (typeof c?.message?.content === "string") return c.message.content;
+      if (typeof c?.text === "string") return c.text;
+    }
+  }
+  return "";
+}
+
+function useLocalMentorChat({ mode, onError }: { mode: Mode; onError?: (e: Error) => void }) {
+  const [messages, setMessages] = useState<UIMessage[]>([]);
+  const [status, setStatus] = useState<ChatStatus>("ready");
+  const [error, setError] = useState<Error | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const lastUserRef = useRef<SendPayload | null>(null);
+
+  const stop = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setStatus("ready");
+  }, []);
+
+  const runRequest = useCallback(async (userMsg: UIMessage, historyForBody: UIMessage[]) => {
+    setStatus("submitted");
+    setError(null);
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
+    let language: string | undefined;
+    try {
+      const raw = localStorage.getItem("upsc_settings_v1");
+      if (raw) language = JSON.parse(raw)?.language;
+    } catch {}
+
+    const flatHistory = historyForBody.map((m) => ({
+      role: m.role,
+      content: partsToText((m.parts ?? []) as SendPart[]),
+    }));
+
+    const base = getFastApiBase();
+    if (isMixedContentBlocked(base)) {
+      const err = new Error(
+        `Browser is on HTTPS but backend URL is ${base} (HTTP). Use an HTTPS tunnel (e.g. ngrok) and set it via the Backend URL button in the header.`,
+      );
+      setError(err);
+      setStatus("error");
+      onError?.(err);
+      abortRef.current = null;
+      return;
+    }
+    try {
+      const res = await fetch(`${base}/mentor`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: ctrl.signal,
+        body: JSON.stringify({
+          mode,
+          language,
+          message: partsToText((userMsg.parts ?? []) as SendPart[]),
+          messages: flatHistory,
+        }),
+      });
+      if (!res.ok) {
+        const raw = await res.text();
+        throw new Error(raw || `HTTP ${res.status}`);
+      }
+      const reader = res.body?.getReader();
+      if (!reader) {
+        throw new Error("Response body is not readable");
+      }
+      const decoder = new TextDecoder();
+      const assistantId = makeId();
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: assistantId,
+          role: "assistant",
+          parts: [{ type: "text", text: "" }],
+        } as unknown as UIMessage,
+      ]);
+      setStatus("streaming");
+      let reply = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        reply += chunk;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? ({ ...m, parts: [{ type: "text", text: reply }] } as unknown as UIMessage)
+              : m
+          )
+        );
+      }
+      setStatus("ready");
+    } catch (e) {
+      if ((e as { name?: string }).name === "AbortError") {
+        setStatus("ready");
+        return;
+      }
+      const err = e instanceof Error ? e : new Error(String(e));
+      setError(err);
+      setStatus("error");
+      onError?.(err);
+    } finally {
+      abortRef.current = null;
+    }
+  }, [mode, onError]);
+
+  const sendMessage = useCallback(async (payload: SendPayload) => {
+    lastUserRef.current = payload;
+    const userMsg: UIMessage = {
+      id: makeId(),
+      role: "user",
+      parts: payload.parts,
+    } as unknown as UIMessage;
+    let history: UIMessage[] = [];
+    setMessages((prev) => {
+      history = prev;
+      return [...prev, userMsg];
+    });
+    await runRequest(userMsg, history);
+  }, [runRequest]);
+
+  const regenerate = useCallback(async () => {
+    const last = lastUserRef.current;
+    if (!last) return;
+    const userMsg: UIMessage = { id: makeId(), role: "user", parts: last.parts } as unknown as UIMessage;
+    // Drop last assistant if present, then rerun
+    let history: UIMessage[] = [];
+    setMessages((prev) => {
+      const trimmed = prev[prev.length - 1]?.role === "assistant" ? prev.slice(0, -1) : prev;
+      history = trimmed.slice(0, -1); // exclude the user we're about to re-add? Actually keep as-is: re-add user
+      return [...trimmed];
+    });
+    await runRequest(userMsg, history);
+  }, [runRequest]);
+
+  return { messages, sendMessage, status, stop, error, regenerate };
+}
+
 function MentorPage() {
   const [mode, setMode] = useState<Mode>("simple");
   const [input, setInput] = useState("");
   const [voiceOut, setVoiceOut] = useState(false);
   const [listening, setListening] = useState(false);
+  const [backendOpen, setBackendOpen] = useState(false);
+  const [backendDraft, setBackendDraft] = useState<string>(() =>
+    typeof window === "undefined" ? "" : getFastApiBase(),
+  );
   const recognitionRef = useRef<SR | null>(null);
   const spokenIdsRef = useRef<Set<string>>(new Set());
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -141,17 +329,8 @@ function MentorPage() {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   }, []);
 
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: "/api/mentor",
-        body: () => ({ mode }),
-      }),
-    [mode],
-  );
-
-  const { messages, sendMessage, status, stop, error, regenerate } = useChat({
-    transport,
+  const { messages, sendMessage, status, stop, error, regenerate } = useLocalMentorChat({
+    mode,
     onError: (e) => {
       console.error("[mentor]", e);
       toast.error("Mentor error", { description: friendlyMentorError(e.message) });
@@ -324,6 +503,15 @@ function MentorPage() {
             title={voiceOut ? "Voice replies on" : "Voice replies off"}
           >
             {voiceOut ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => { setBackendDraft(getFastApiBase()); setBackendOpen(true); }}
+            aria-label="Backend URL"
+            title="Set backend URL"
+          >
+            <Server className="h-4 w-4" />
           </Button>
         </div>
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-2 px-4 pb-2 sm:hidden">
@@ -599,6 +787,46 @@ function MentorPage() {
           )}
         </form>
       </footer>
+
+      <Dialog open={backendOpen} onOpenChange={setBackendOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Backend URL</DialogTitle>
+            <DialogDescription>
+              The AI Mentor calls your local Python FastAPI server. The Lovable preview runs on
+              HTTPS, so <strong>http://localhost:8000</strong> is blocked by the browser (mixed
+              content). Expose your backend via an HTTPS tunnel (e.g. <code>ngrok http 8000</code>)
+              and paste the HTTPS URL below. Leave blank to reset to <code>http://localhost:8000</code>
+              (only works when you run the frontend locally too).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input
+              value={backendDraft}
+              onChange={(e) => setBackendDraft(e.target.value)}
+              placeholder="https://your-tunnel.ngrok-free.app"
+              autoFocus
+            />
+            {typeof window !== "undefined" && window.location.protocol === "https:" && backendDraft.startsWith("http://") && (
+              <p className="text-xs text-amber-600">
+                Warning: this is an HTTP URL. The browser will block requests from an HTTPS preview.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBackendOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                setFastApiBase(backendDraft);
+                setBackendOpen(false);
+                toast.success("Backend URL saved", { description: getFastApiBase() });
+              }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
