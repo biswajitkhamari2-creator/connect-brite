@@ -57,6 +57,7 @@ export const Route = createFileRoute("/api/mentor")({
           },
         }),
       POST: async ({ request }) => {
+        const requestId = crypto.randomUUID();
         let body: Body;
         try {
           body = (await request.json()) as Body;
@@ -71,6 +72,8 @@ export const Route = createFileRoute("/api/mentor")({
         if (mode && mode !== "simple" && mode !== "advanced") {
           return jsonError("Invalid mentor mode.", 400, "INVALID_MODE");
         }
+
+        console.log(`[Request ID: ${requestId}] Prompt received from frontend:`, JSON.stringify(messages));
 
         try {
           const initialRunId = getLovableAiGatewayRunId(request);
@@ -87,8 +90,9 @@ export const Route = createFileRoute("/api/mentor")({
             try {
               const { searchWeb } = await import("@/lib/search.server");
               searchVerificationContext = await searchWeb(lastQuery, 2);
+              console.log(`[Request ID: ${requestId}] Web search context for '${lastQuery}':`, searchVerificationContext);
             } catch (err) {
-              console.error("Search verification failed:", err);
+              console.error(`[Request ID: ${requestId}] Search verification failed:`, err);
             }
           }
 
@@ -98,26 +102,43 @@ export const Route = createFileRoute("/api/mentor")({
               : ""
           }`;
 
+          console.log(`[Request ID: ${requestId}] System prompt sent to Ollama:`, systemPrompt);
+          const formattedMessages = await convertToModelMessages(messages as UIMessage[]);
+          console.log(`[Request ID: ${requestId}] Messages sent to Ollama:`, JSON.stringify(formattedMessages));
+
           const result = streamText({
             model,
             maxRetries: 0,
             system: systemPrompt,
-            messages: await convertToModelMessages(messages as UIMessage[]),
+            messages: formattedMessages,
             onError: ({ error }) => {
-              console.error("[mentor stream]", error);
+              console.error(`[Request ID: ${requestId}] [mentor stream error]`, error);
             },
+            onChunk: ({ chunk }) => {
+              if (chunk.type === "text-delta" && chunk.textDelta) {
+                console.log(`[Request ID: ${requestId}] Raw Ollama chunk:`, JSON.stringify(chunk.textDelta));
+              }
+            }
           });
           const response = result.toUIMessageStreamResponse({
             originalMessages: messages as UIMessage[],
             headers: getLovableAiGatewayResponseHeaders(undefined, {
-              "cache-control": "no-store",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "X-Request-ID": requestId,
               ...(initialRunId ? { "X-Lovable-AIG-Run-ID": initialRunId } : {}),
             }),
             onError: mentorErrorMessage,
           });
-          return withLovableAiGatewayRunIdHeader(response, gateway, { "cache-control": "no-store" });
+          return withLovableAiGatewayRunIdHeader(response, gateway, { 
+            "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+            "pragma": "no-cache",
+            "expires": "0",
+            "X-Request-ID": requestId
+          });
         } catch (error) {
-          console.error("[mentor api]", error);
+          console.error(`[Request ID: ${requestId}] [mentor api error]`, error);
           return jsonError(mentorErrorMessage(error), 500);
         }
       },
