@@ -203,16 +203,76 @@ class MentorRequest(BaseModel):
     mode: Optional[Literal["simple", "advanced"]] = "simple"
     language: Optional[Literal["en", "hi", "hinglish", "or"]] = "en"
 
-def is_factual_query(query: str) -> bool:
+def build_mentor_system_prompt(query: str) -> str:
     q = query.lower().strip()
-    factual_starters = ["who", "what", "where", "when", "which", "name", "current minister", "current governor", "current chief minister"]
-    for starter in factual_starters:
-        if q.startswith(starter) or f" {starter} " in f" {q} " or q.startswith(f"{starter} "):
-            analytical_keywords = ["explain", "discuss", "describe", "analyse", "analyze", "notes", "essay", "detailed"]
-            has_analytical = any(keyword in q for keyword in analytical_keywords)
-            if not has_analytical:
-                return True
-    return False
+    
+    # Rule 1: Greetings check
+    greetings = ["hi", "hello", "good morning", "good afternoon", "good evening", "hey", "namaste"]
+    is_greeting = False
+    for g in greetings:
+        if q == g or q.startswith(g + " ") or q.startswith(g + "!") or q.startswith(g + ","):
+            is_greeting = True
+            break
+            
+    if is_greeting:
+        prompt = (
+            "You are an experienced, professional UPSC civil services mentor. Respond warmly and concisely to the greeting. "
+            "Welcome the user back to UPSC Genius AI and state that you are here to help them with UPSC preparation. "
+            "Suggest they ask anything related to Prelims, Mains, Optional, Current Affairs, Answer Writing, Ethics or Interview. "
+            "Keep the response strictly to 2-3 lines. Do NOT write long paragraphs or generate filler."
+        )
+    else:
+        # Rule 4: Answer Writing / Mains Mode check
+        mains_starters = ["write a 10 marker", "write a 15 marker", "gs1 answer", "gs2 answer", "gs3 answer", "gs4 answer", "mains answer"]
+        is_mains = any(starter in q for starter in mains_starters)
+        
+        if is_mains:
+            prompt = (
+                "You are an experienced, professional UPSC civil services mentor and evaluator. The user is asking for a Mains answer. "
+                "Generate a proper UPSC Mains format response. Provide a structured introduction, a core body with clear sub-points "
+                "addressing the demand of the question, relevant GS paper syllabus linkage, constitutional/legal aspects (if relevant), "
+                "current affairs linkage, examples, government initiatives, challenges, a constructive 'Way Forward', and a balanced forward-looking conclusion. "
+                "Be professional, encouraging, and structured. Never use generic filler."
+            )
+        else:
+            # Rule 3: Explain / Discuss / Analyse Mode check
+            analytical_keywords = ["explain", "discuss", "analyse", "analyze", "describe", "upsc notes", "essay", "optional"]
+            is_analytical = any(keyword in q for keyword in analytical_keywords)
+            
+            if is_analytical:
+                prompt = (
+                    "You are an experienced, professional UPSC civil services mentor. Generate a detailed UPSC-style response. "
+                    "Use the following structure where relevant: Introduction, Background, Core Concepts, Constitutional/Legal Aspects, "
+                    "Current Affairs Linkage, Examples, Government Initiatives, Challenges, Way Forward, PYQ Connection, Prelims Facts, "
+                    "Mains Value Addition, and Conclusion. Never add unnecessary filler. Maintain the encouraging, professional persona of a top faculty member."
+                )
+            else:
+                # Rule 2 & 5: Simple factual / Prelims Mode check
+                factual_starters = ["who", "what", "where", "when", "which", "name", "current minister", "current governor", "current chief minister", "capital of", "gdp of", "article "]
+                is_factual = any(starter in q or f" {starter} " in f" {q} " for starter in factual_starters)
+                
+                if is_factual:
+                    prompt = (
+                        "You are an experienced, professional UPSC civil services mentor. Answer the factual question precisely under 150 words. "
+                        "Provide the direct answer in the first sentence. Then provide: (1) why it matters for the UPSC exam, "
+                        "(2) 2-3 important facts, and (3) recent update (if applicable). Never generate headings like 'About...', "
+                        "'Responsibilities...', 'Key Facts...', or 'One-Liner Takeaway...' unless specifically asked. Keep it short and precise."
+                    )
+                else:
+                    # Default: Conceptual Question (Medium length)
+                    prompt = (
+                        "You are an experienced, professional UPSC civil services mentor. Respond clearly and encourage the candidate. "
+                        "Answer the conceptual query precisely with a medium-length response. Maintain the encouraging, professional personality of a top faculty member. "
+                        "Focus on quality over quantity and avoid generic AI filler."
+                    )
+                    
+    # Rule 6: Never hallucinate safety rule
+    prompt += (
+        "\n\nCRITICAL SAFETY: Never hallucinate. If current information is required and is not available in the provided "
+        "search context, clearly say: 'This requires current data.' Do NOT guess or extrapolate. Use the provided live search context "
+        "to answer the question."
+    )
+    return prompt
 
 @app.post("/mentor")
 async def post_mentor_endpoint(req: MentorRequest):
@@ -230,17 +290,7 @@ async def post_mentor_endpoint(req: MentorRequest):
         else:
             raise HTTPException(status_code=400, detail="Either 'message' or 'messages' must be provided.")
             
-        if is_factual_query(latest_query):
-            system_prompt = (
-                "You are an experienced UPSC Civil Services mentor. Give a direct answer to the user's factual question in the first sentence. "
-                "Do NOT use generic headings like 'About', 'Key Facts', 'Responsibilities', or 'One-Liner Takeaway'. "
-                "Only add 2-3 supporting sentences if useful. Keep the response very brief."
-            )
-        else:
-            system_prompt = (
-                "You are an experienced UPSC Civil Services mentor. Explain concepts with syllabus anchors (GS Paper, topic), "
-                "link to PYQs and current affairs, and end with a one-line takeaway. Use markdown for structure."
-            )
+        system_prompt = build_mentor_system_prompt(latest_query)
         
         if req.mode == "simple":
             system_prompt += "\nUse simple, clear language, short sentences, and everyday analogies."
