@@ -17,7 +17,8 @@ def generate_mentor_reply(messages: list, system_prompt: str) -> str:
         if "/api/chat" not in chat_url and not chat_url.endswith("/chat"):
             chat_url = chat_url.rstrip("/") + "/api/chat"
             
-        logger.info(f"Routing request to Ollama ({OLLAMA_MODEL}) at {chat_url}")
+        clean_model = OLLAMA_MODEL.strip().replace("\ufeff", "").replace("\u200b", "")
+        logger.info(f"Routing request to Ollama ({clean_model}) at {chat_url}")
         
         api_messages = [{"role": "system", "content": system_prompt}]
         for msg in messages:
@@ -27,7 +28,7 @@ def generate_mentor_reply(messages: list, system_prompt: str) -> str:
             api_messages.append({"role": role, "content": msg.get("content", "")})
             
         payload = {
-            "model": OLLAMA_MODEL,
+            "model": clean_model,
             "messages": api_messages,
             "stream": False,
             "options": {

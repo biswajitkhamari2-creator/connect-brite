@@ -37,8 +37,9 @@ def generate_upsc_analysis(articles: list) -> dict:
         
     prompt = USER_PROMPT_TEMPLATE.format(articles_text=articles_text)
     
+    cleaned_model = OLLAMA_MODEL.strip().replace("\ufeff", "").replace("\u200b", "")
     payload = {
-        "model": OLLAMA_MODEL,
+        "model": cleaned_model,
         "prompt": prompt,
         "system": SYSTEM_PROMPT,
         "stream": False,
@@ -54,7 +55,7 @@ def generate_upsc_analysis(articles: list) -> dict:
     ollama_timeout = 180.0
     
     try:
-        logger.info(f"Sending prompt to local Ollama ({OLLAMA_MODEL}) at {OLLAMA_API_URL}")
+        logger.info(f"Sending prompt to local Ollama ({cleaned_model}) at {OLLAMA_API_URL}")
         response = requests.post(OLLAMA_API_URL, json=payload, timeout=ollama_timeout)
         response.raise_for_status()
         

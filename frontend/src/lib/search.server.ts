@@ -11,9 +11,9 @@ export async function searchWeb(query: string, maxResults = 3): Promise<string> 
     });
     clearTimeout(timeoutId);
     const html = await res.text();
-    // Parse the HTML using regex to find result__snippet and result__title
-    const snippetMatches = Array.from(html.matchAll(/<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g));
-    const titleMatches = Array.from(html.matchAll(/<a class="result__url"[^>]*>([\s\S]*?)<\/a>/g));
+    // Robust regex to match class in any attribute order with single or double quotes
+    const snippetMatches = Array.from(html.matchAll(/<a\s+(?:[^>]*?\s+)?class=["']result__snippet["'][^>]*>([\s\S]*?)<\/a>/g));
+    const titleMatches = Array.from(html.matchAll(/<a\s+(?:[^>]*?\s+)?class=["']result__url["'][^>]*>([\s\S]*?)<\/a>/g));
     
     const snippets: string[] = [];
     const count = Math.min(maxResults, snippetMatches.length);
