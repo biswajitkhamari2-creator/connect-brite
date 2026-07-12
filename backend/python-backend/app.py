@@ -12,6 +12,9 @@ from pathlib import Path
 from config import CACHE_DIR, CACHE_EXPIRY_SECONDS, HOST, PORT, CORS_ORIGINS
 from rss import get_all_news
 from ollama_client import generate_upsc_analysis, get_empty_fallback_response
+from mentor_client import generate_mentor_reply
+from pydantic import BaseModel
+from typing import List, Optional, Literal
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -189,6 +192,53 @@ async def get_interview_endpoint(refresh: bool = Query(default=False)):
     except Exception as e:
         logger.error(f"Error in /interview endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class MentorRequest(BaseModel):
+    message: Optional[str] = None
+    messages: Optional[List[ChatMessage]] = None
+    mode: Optional[Literal["simple", "advanced"]] = "simple"
+    language: Optional[Literal["en", "hi", "hinglish", "or"]] = "en"
+
+@app.post("/mentor")
+async def post_mentor_endpoint(req: MentorRequest):
+    try:
+        messages = []
+        if req.messages:
+            messages = [{"role": m.role, "content": m.content} for m in req.messages]
+        elif req.message:
+            messages = [{"role": "user", "content": req.message}]
+        else:
+            raise HTTPException(status_code=400, detail="Either 'message' or 'messages' must be provided.")
+            
+        system_prompt = (
+            "You are an experienced UPSC Civil Services mentor. Explain concepts with syllabus anchors (GS Paper, topic), "
+            "link to PYQs and current affairs, and end with a one-line takeaway. Use markdown for structure."
+        )
+        
+        if req.mode == "simple":
+            system_prompt += "\nUse simple, clear language, short sentences, and everyday analogies."
+        elif req.mode == "advanced":
+            system_prompt += "\nUse precise terminology, cite Articles/Sections/Committees/Reports/judgements, and surface inter-topic connections."
+            
+        if req.language == "hi":
+            system_prompt += "\nRespond in Hindi (Devanagari script)."
+        elif req.language == "hinglish":
+            system_prompt += "\nRespond in Hinglish — natural Hindi + English mix."
+        elif req.language == "or":
+            system_prompt += (
+                "\nRespond ENTIRELY in pure Odia script (ଓଡ଼ିଆ). No English, no Roman letters, no Devanagari. "
+                "Translate every technical term into Odia."
+            )
+            
+        reply = generate_mentor_reply(messages, system_prompt)
+        return {"reply": reply}
+    except Exception as e:
+        logger.error(f"Error in /mentor endpoint: {e}")
+        return {"reply": f"Error: {str(e)}"}
 
 @app.get("/health")
 async def health_check():
