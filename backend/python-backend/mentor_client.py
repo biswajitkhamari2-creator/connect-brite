@@ -1,7 +1,5 @@
 import os
 import logging
-from groq import Groq
-import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +35,10 @@ def generate_mentor_reply(messages: list, system_prompt: str) -> str:
             }
         }
         
-        response = requests.post(chat_url, json=payload, timeout=30)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        response = requests.post(chat_url, json=payload, headers=headers, timeout=30)
         if response.status_code == 200:
             result = response.json()
             reply = result.get("message", {}).get("content", "")
@@ -53,6 +54,7 @@ def generate_mentor_reply(messages: list, system_prompt: str) -> str:
     # 1. Try Groq
     if groq_api_key:
         try:
+            from groq import Groq
             logger.info("Attempting to generate mentor response using Groq (llama-3.3-70b-versatile)")
             client = Groq(api_key=groq_api_key)
             
@@ -80,6 +82,7 @@ def generate_mentor_reply(messages: list, system_prompt: str) -> str:
     # 2. Try Gemini
     if gemini_api_key:
         try:
+            import google.generativeai as genai
             logger.info("Attempting to generate mentor response using Gemini (gemini-2.0-flash)")
             genai.configure(api_key=gemini_api_key)
             
