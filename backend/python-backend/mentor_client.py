@@ -4,6 +4,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 def generate_mentor_reply(messages: list, system_prompt: str) -> str:
+    errors = []
+    
     # 1. Try Ollama (Local/Self-hosted)
     try:
         from config import OLLAMA_API_URL, OLLAMA_MODEL
@@ -45,20 +47,24 @@ def generate_mentor_reply(messages: list, system_prompt: str) -> str:
             if reply:
                 logger.info("Ollama response generated successfully")
                 return reply
+            else:
+                errors.append("Ollama: empty response content")
+        else:
+            errors.append(f"Ollama HTTP status {response.status_code}: {response.text[:200]}")
     except Exception as e:
-        logger.warning(f"Ollama call failed or skipped: {e}")
+        logger.warning(f"Ollama call failed: {e}")
+        errors.append(f"Ollama error: {str(e)}")
 
     groq_api_key = os.getenv("GROQ_API_KEY")
     gemini_api_key = os.getenv("GEMINI_API_KEY")
     
-    # 1. Try Groq
+    # 2. Try Groq
     if groq_api_key:
         try:
             from groq import Groq
             logger.info("Attempting to generate mentor response using Groq (llama-3.3-70b-versatile)")
             client = Groq(api_key=groq_api_key)
             
-            # Build messages list incorporating system prompt
             api_messages = [{"role": "system", "content": system_prompt}]
             for msg in messages:
                 role = msg.get("role", "user")
@@ -76,17 +82,21 @@ def generate_mentor_reply(messages: list, system_prompt: str) -> str:
             if reply:
                 logger.info("Groq response generated successfully")
                 return reply
+            else:
+                errors.append("Groq: empty response content")
         except Exception as e:
-            logger.error(f"Groq API call failed: {e}. Falling back to Gemini...")
+            logger.error(f"Groq API call failed: {e}")
+            errors.append(f"Groq error: {str(e)}")
+    else:
+        errors.append("Groq: GROQ_API_KEY missing")
             
-    # 2. Try Gemini
+    # 3. Try Gemini
     if gemini_api_key:
         try:
             import google.generativeai as genai
             logger.info("Attempting to generate mentor response using Gemini (gemini-2.0-flash)")
             genai.configure(api_key=gemini_api_key)
             
-            # Map messages to Gemini SDK format
             contents = []
             for msg in messages:
                 role = "model" if msg.get("role") == "assistant" else "user"
@@ -111,8 +121,12 @@ def generate_mentor_reply(messages: list, system_prompt: str) -> str:
             if reply:
                 logger.info("Gemini response generated successfully")
                 return reply
+            else:
+                errors.append("Gemini: empty response content")
         except Exception as e:
             logger.error(f"Gemini API call failed: {e}")
-            raise e
+            errors.append(f"Gemini error: {str(e)}")
+    else:
+        errors.append("Gemini: GEMINI_API_KEY missing")
             
-    raise Exception("Ollama, Groq, and Gemini API clients failed or were missing configurations.")
+    raise Exception(f"All clients failed. Details: {'; '.join(errors)}")
