@@ -6,6 +6,42 @@ import google.generativeai as genai
 logger = logging.getLogger(__name__)
 
 def generate_mentor_reply(messages: list, system_prompt: str) -> str:
+    # 1. Try Ollama (Local/Self-hosted)
+    try:
+        from config import OLLAMA_API_URL, OLLAMA_MODEL
+        import requests
+        chat_url = OLLAMA_API_URL.replace("/generate", "/chat")
+        if "/chat" not in chat_url:
+            chat_url = "http://localhost:11434/api/chat"
+            
+        logger.info(f"Attempting to generate mentor response using Ollama ({OLLAMA_MODEL}) at {chat_url}")
+        
+        api_messages = [{"role": "system", "content": system_prompt}]
+        for msg in messages:
+            role = msg.get("role", "user")
+            if role not in ["user", "assistant", "system"]:
+                role = "user"
+            api_messages.append({"role": role, "content": msg.get("content", "")})
+            
+        payload = {
+            "model": OLLAMA_MODEL,
+            "messages": api_messages,
+            "stream": False,
+            "options": {
+                "temperature": 0.7
+            }
+        }
+        
+        response = requests.post(chat_url, json=payload, timeout=30)
+        if response.status_code == 200:
+            result = response.json()
+            reply = result.get("message", {}).get("content", "")
+            if reply:
+                logger.info("Ollama response generated successfully")
+                return reply
+    except Exception as e:
+        logger.warning(f"Ollama call failed or skipped: {e}")
+
     groq_api_key = os.getenv("GROQ_API_KEY")
     gemini_api_key = os.getenv("GEMINI_API_KEY")
     
@@ -71,4 +107,4 @@ def generate_mentor_reply(messages: list, system_prompt: str) -> str:
             logger.error(f"Gemini API call failed: {e}")
             raise e
             
-    raise Exception("Both Groq and Gemini API clients failed or keys were missing.")
+    raise Exception("Ollama, Groq, and Gemini API clients failed or were missing configurations.")
