@@ -3,7 +3,7 @@ import logging
 import os
 import time
 from fastapi import FastAPI, Request, Query, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,7 +12,7 @@ from pathlib import Path
 from config import CACHE_DIR, CACHE_EXPIRY_SECONDS, HOST, PORT, CORS_ORIGINS
 from rss import get_all_news
 from ollama_client import generate_upsc_analysis, get_empty_fallback_response
-from mentor_client import generate_mentor_reply
+from mentor_client import generate_mentor_reply, generate_mentor_reply_stream
 from pydantic import BaseModel
 from typing import List, Optional, Literal
 
@@ -234,11 +234,17 @@ async def post_mentor_endpoint(req: MentorRequest):
                 "Translate every technical term into Odia."
             )
             
-        reply = generate_mentor_reply(messages, system_prompt)
-        return {"reply": reply}
+        return StreamingResponse(
+            generate_mentor_reply_stream(messages, system_prompt),
+            media_type="text/plain",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no"
+            }
+        )
     except Exception as e:
         logger.error(f"Error in /mentor endpoint: {e}")
-        return {"reply": f"Error: {str(e)}"}
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
 async def health_check():
