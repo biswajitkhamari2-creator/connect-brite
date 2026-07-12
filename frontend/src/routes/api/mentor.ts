@@ -114,9 +114,9 @@ export const Route = createFileRoute("/api/mentor")({
             onError: ({ error }) => {
               console.error(`[Request ID: ${requestId}] [mentor stream error]`, error);
             },
-            onChunk: ({ chunk }) => {
-              if (chunk.type === "text-delta" && chunk.textDelta) {
-                console.log(`[Request ID: ${requestId}] Raw Ollama chunk:`, JSON.stringify(chunk.textDelta));
+            onChunk: (event) => {
+              if (event && event.chunk) {
+                console.log(`[Request ID: ${requestId}] Raw Ollama chunk:`, JSON.stringify(event.chunk));
               }
             }
           });
