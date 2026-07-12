@@ -40,7 +40,7 @@ def generate_mentor_reply(messages: list, system_prompt: str) -> str:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
-        response = requests.post(chat_url, json=payload, headers=headers, timeout=30)
+        response = requests.post(chat_url, json=payload, headers=headers, timeout=180)
         if response.status_code == 200:
             result = response.json()
             reply = result.get("message", {}).get("content", "")
