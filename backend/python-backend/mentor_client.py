@@ -10,9 +10,14 @@ def generate_mentor_reply(messages: list, system_prompt: str) -> str:
     try:
         from config import OLLAMA_API_URL, OLLAMA_MODEL
         import requests
-        chat_url = OLLAMA_API_URL.replace("/generate", "/chat")
-        if "/chat" not in chat_url:
-            chat_url = "http://localhost:11434/api/chat"
+        chat_url = OLLAMA_API_URL
+        if chat_url.endswith("/api/generate"):
+            chat_url = chat_url.replace("/api/generate", "/api/chat")
+        elif chat_url.endswith("/generate"):
+            chat_url = chat_url.replace("/generate", "/chat")
+            
+        if "/api/chat" not in chat_url and not chat_url.endswith("/chat"):
+            chat_url = chat_url.rstrip("/") + "/api/chat"
             
         logger.info(f"Attempting to generate mentor response using Ollama ({OLLAMA_MODEL}) at {chat_url}")
         
