@@ -202,6 +202,7 @@ class MentorRequest(BaseModel):
     messages: Optional[List[ChatMessage]] = None
     mode: Optional[Literal["simple", "advanced"]] = "simple"
     language: Optional[Literal["en", "hi", "hinglish", "or"]] = "en"
+    provider: Optional[Literal["ollama", "gemini"]] = "ollama"
 
 def build_mentor_system_prompt(query: str) -> str:
     q = query.lower().strip()
@@ -308,7 +309,7 @@ async def post_mentor_endpoint(req: MentorRequest):
             )
             
         return StreamingResponse(
-            generate_mentor_reply_stream(messages, system_prompt),
+            generate_mentor_reply_stream(messages, system_prompt, req.provider),
             media_type="text/plain",
             headers={
                 "Cache-Control": "no-cache",
