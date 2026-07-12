@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPSC AI News Assistant & Current Affairs Dashboard</title>
+    
+    <!-- Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="dark-theme">
+    
+    <header class="app-header">
+        <div class="header-logo">
+            <i class="fa-solid fa-graduation-cap logo-icon"></i>
+            <div>
+                <h1>UPSC AI News Assistant</h1>
+                <p class="subtitle">Local & Intelligent Current Affairs Tracker</p>
+            </div>
+        </div>
+        
+        <div class="header-controls">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="global-search" placeholder="Search current affairs...">
+            </div>
+            
+            <button id="refresh-btn" class="btn btn-primary" title="Refresh RSS Feeds and Generate Analysis">
+                <i class="fa-solid fa-arrows-rotate"></i>
+                <span>Refresh Data</span>
+            </button>
+            
+            <button id="theme-toggle" class="btn btn-secondary" title="Toggle Light/Dark Theme">
+                <i class="fa-solid fa-sun"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="main-layout">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <button class="nav-item active" data-tab="tab-overview">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>Dashboard Overview</span>
+            </button>
+            <button class="nav-item" data-tab="tab-news">
+                <i class="fa-solid fa-rss"></i>
+                <span>Live Feed <span class="badge" id="news-count">0</span></span>
+            </button>
+            <button class="nav-item" data-tab="tab-editorial">
+                <i class="fa-solid fa-newspaper"></i>
+                <span>Editorial Analysis</span>
+            </button>
+            <button class="nav-item" data-tab="tab-mcqs">
+                <i class="fa-solid fa-list-check"></i>
+                <span>Prelims MCQs <span class="badge bg-gold">10</span></span>
+            </button>
+            <button class="nav-item" data-tab="tab-mains">
+                <i class="fa-solid fa-pen-nib"></i>
+                <span>Mains Questions <span class="badge bg-gold">5</span></span>
+            </button>
+            <button class="nav-item" data-tab="tab-interview">
+                <i class="fa-solid fa-comments"></i>
+                <span>Interview Prep</span>
+            </button>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="content-container">
+            <!-- Loading Indicator -->
+            <div id="loading-overlay" class="hidden">
+                <div class="spinner-wrapper">
+                    <div class="spinner"></div>
+                    <p class="loading-text">Analyzing RSS feeds & generating UPSC insights...</p>
+                    <p class="loading-subtext">This uses local Ollama Llama3.2:3b and might take 30-90 seconds.</p>
+                </div>
+            </div>
+
+            <!-- TAB: OVERVIEW -->
+            <section id="tab-overview" class="tab-content active">
+                <div class="welcome-banner">
+                    <div class="banner-content">
+                        <h2>Welcome, Aspirant</h2>
+                        <p>Your local AI model <strong>llama3.2:3b</strong> has parsed the latest national feeds. Here is your current affairs roadmap for today.</p>
+                    </div>
+                </div>
+
+                <div class="overview-grid">
+                    <!-- Executive Summary -->
+                    <div class="card card-full col-span-2">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-file-invoice"></i> Executive Summary</h3>
+                        </div>
+                        <div class="card-body">
+                            <p id="executive-summary-text" class="summary-para">Loading summary...</p>
+                        </div>
+                    </div>
+
+                    <!-- GS Mapping -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-map-location-dot"></i> UPSC GS Syllabus Mapping</h3>
+                        </div>
+                        <div class="card-body" id="gs-mapping-list">
+                            <!-- Populated by JS -->
+                            <p class="placeholder-text">Loading mappings...</p>
+                        </div>
+                    </div>
+
+                    <!-- Important Data -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-database"></i> Important Statistics & Data</h3>
+                        </div>
+                        <div class="card-body" id="important-data-list">
+                            <!-- Populated by JS -->
+                            <p class="placeholder-text">Loading data metrics...</p>
+                        </div>
+                    </div>
+
+                    <!-- Top 10 Current Affairs -->
+                    <div class="card card-full col-span-2">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-star"></i> Top 10 Current Affairs Issues</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="current-affairs-timeline" id="top-affairs-timeline">
+                                <p class="placeholder-text">Loading timeline...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Keywords & Facts -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-key"></i> Key Administrative Terms</h3>
+                        </div>
+                        <div class="card-body" id="keywords-list">
+                            <p class="placeholder-text">Loading keywords...</p>
+                        </div>
+                    </div>
+
+                    <!-- Prelims Facts -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-circle-info"></i> Prelims Specific Facts</h3>
+                        </div>
+                        <div class="card-body" id="prelims-facts-list">
+                            <p class="placeholder-text">Loading facts...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Revision Notes -->
+                    <div class="card card-full col-span-2">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-book-open"></i> Quick Revision Notes</h3>
+                        </div>
+                        <div class="card-body notes-container" id="revision-notes-content">
+                            <p class="placeholder-text">Loading notes...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB: LIVE RSS FEED -->
+            <section id="tab-news" class="tab-content">
+                <div class="section-title">
+                    <h2>Live RSS Feed</h2>
+                    <p>Deduplicated current affairs parsed from multiple government and national news portals.</p>
+                </div>
+                <div class="news-filters">
+                    <button class="filter-chip active" data-source="all">All Sources</button>
+                    <!-- Feeds generated dynamically -->
+                </div>
+                <div class="news-grid" id="news-articles-grid">
+                    <!-- Populated by JS -->
+                </div>
+            </section>
+
+            <!-- TAB: EDITORIAL ANALYSIS -->
+            <section id="tab-editorial" class="tab-content">
+                <div class="section-title">
+                    <h2>Editorial & Issue Analysis</h2>
+                    <p>In-depth insights, challenges, and constitutional standpoints compiled by AI.</p>
+                </div>
+                <div class="editorial-container" id="editorial-analysis-content">
+                    <!-- Populated by JS -->
+                    <p class="placeholder-text">Generating editorial critiques...</p>
+                </div>
+            </section>
+
+            <!-- TAB: PRELIMS MCQS -->
+            <section id="tab-mcqs" class="tab-content">
+                <div class="section-title">
+                    <h2>UPSC Prelims Mock Questions</h2>
+                    <p>Statement-based Multiple Choice Questions created by Ollama from today's headlines.</p>
+                </div>
+                <div class="mcqs-container" id="mcqs-content">
+                    <!-- Populated by JS -->
+                    <p class="placeholder-text">Generating Prelims MCQs...</p>
+                </div>
+            </section>
+
+            <!-- TAB: MAINS QUESTIONS -->
+            <section id="tab-mains" class="tab-content">
+                <div class="section-title">
+                    <h2>UPSC Mains Practice Questions</h2>
+                    <p>Analytical high-quality questions for General Studies (GS) paper answer writing preparation.</p>
+                </div>
+                <div class="mains-container" id="mains-content">
+                    <!-- Populated by JS -->
+                    <p class="placeholder-text">Generating Mains answer templates...</p>
+                </div>
+            </section>
+
+            <!-- TAB: INTERVIEW PREP -->
+            <section id="tab-interview" class="tab-content">
+                <div class="section-title">
+                    <h2>UPSC Personality Test Prep</h2>
+                    <p>Balanced administrative standpoint questions commonly asked during interview boards.</p>
+                </div>
+                <div class="interview-container" id="interview-content">
+                    <!-- Populated by JS -->
+                    <p class="placeholder-text">Generating board member questions...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <footer class="app-footer">
+        <p>&copy; 2026 UPSC AI News Assistant. Powered by local LLMs (Ollama) & Google RSS feeds. 100% Free and Private.</p>
+    </footer>
+
+    <!-- Main Application Logic Script -->
+    <script src="/static/script.js"></script>
+</body>
+</html>
