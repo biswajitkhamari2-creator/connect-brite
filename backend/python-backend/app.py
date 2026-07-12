@@ -203,21 +203,44 @@ class MentorRequest(BaseModel):
     mode: Optional[Literal["simple", "advanced"]] = "simple"
     language: Optional[Literal["en", "hi", "hinglish", "or"]] = "en"
 
+def is_factual_query(query: str) -> bool:
+    q = query.lower().strip()
+    factual_starters = ["who", "what", "where", "when", "which", "name", "current minister", "current governor", "current chief minister"]
+    for starter in factual_starters:
+        if q.startswith(starter) or f" {starter} " in f" {q} " or q.startswith(f"{starter} "):
+            analytical_keywords = ["explain", "discuss", "describe", "analyse", "analyze", "notes", "essay", "detailed"]
+            has_analytical = any(keyword in q for keyword in analytical_keywords)
+            if not has_analytical:
+                return True
+    return False
+
 @app.post("/mentor")
 async def post_mentor_endpoint(req: MentorRequest):
     try:
         messages = []
+        latest_query = ""
         if req.messages:
             messages = [{"role": m.role, "content": m.content} for m in req.messages]
+            user_msgs = [m.content for m in req.messages if m.role == "user"]
+            if user_msgs:
+                latest_query = user_msgs[-1]
         elif req.message:
             messages = [{"role": "user", "content": req.message}]
+            latest_query = req.message
         else:
             raise HTTPException(status_code=400, detail="Either 'message' or 'messages' must be provided.")
             
-        system_prompt = (
-            "You are an experienced UPSC Civil Services mentor. Explain concepts with syllabus anchors (GS Paper, topic), "
-            "link to PYQs and current affairs, and end with a one-line takeaway. Use markdown for structure."
-        )
+        if is_factual_query(latest_query):
+            system_prompt = (
+                "You are an experienced UPSC Civil Services mentor. Give a direct answer to the user's factual question in the first sentence. "
+                "Do NOT use generic headings like 'About', 'Key Facts', 'Responsibilities', or 'One-Liner Takeaway'. "
+                "Only add 2-3 supporting sentences if useful. Keep the response very brief."
+            )
+        else:
+            system_prompt = (
+                "You are an experienced UPSC Civil Services mentor. Explain concepts with syllabus anchors (GS Paper, topic), "
+                "link to PYQs and current affairs, and end with a one-line takeaway. Use markdown for structure."
+            )
         
         if req.mode == "simple":
             system_prompt += "\nUse simple, clear language, short sentences, and everyday analogies."
