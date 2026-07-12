@@ -14,10 +14,15 @@ export const sendMail = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => InputSchema.parse(data))
   .handler(async ({ data }) => {
     const getApiBaseUrl = (): string => {
+      const envUrl = process.env.VITE_BACKEND_URL || (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_BACKEND_URL : undefined);
+      if (envUrl) {
+        return envUrl.replace(/\/+$/, "");
+      }
+
       if (typeof window !== "undefined" && window.location.hostname) {
         const host = window.location.hostname;
         const isLocal = host === "localhost" || host === "127.0.0.1" || host.startsWith("192.168.") || host.startsWith("10.");
-        if (!isLocal) return "";
+        if (!isLocal) return window.location.origin;
         return `http://${host}:8000`;
       }
       return "http://localhost:8000";

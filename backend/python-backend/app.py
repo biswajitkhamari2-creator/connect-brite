@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 
-from config import CACHE_DIR, CACHE_EXPIRY_SECONDS, HOST, PORT
+from config import CACHE_DIR, CACHE_EXPIRY_SECONDS, HOST, PORT, CORS_ORIGINS
 from rss import get_all_news
 from ollama_client import generate_upsc_analysis, get_empty_fallback_response
 
@@ -19,10 +19,11 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="UPSC AI News Assistant", version="1.0.0")
 
 # Enable CORS
+allow_all = "*" in CORS_ORIGINS or len(CORS_ORIGINS) == 0
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=["*"] if allow_all else CORS_ORIGINS,
+    allow_credentials=not allow_all,
     allow_methods=["*"],
     allow_headers=["*"],
 )

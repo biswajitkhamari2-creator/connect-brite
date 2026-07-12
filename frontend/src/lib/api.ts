@@ -2,11 +2,16 @@
 // Routes match exactly what the PHP backend exposes.
 
 const getApiBaseUrl = (): string => {
+  const envUrl = import.meta.env.VITE_BACKEND_URL;
+  if (envUrl) {
+    return envUrl.replace(/\/+$/, "");
+  }
+
   if (typeof window !== "undefined" && window.location.hostname) {
     const host = window.location.hostname;
     const isLocal = host === "localhost" || host === "127.0.0.1" || host.startsWith("192.168.") || host.startsWith("10.");
     if (!isLocal) {
-      return ""; // Relative path /api in production
+      return window.location.origin;
     }
     return `http://${host}:8000`;
   }
@@ -54,7 +59,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     res = await fetch(`${BASE}${path}`, { ...init, headers });
   } catch (e) {
     throw new Error(
-      `Cannot reach backend at ${BASE}. Make sure the PHP server is running (php -S localhost:8000 -t public). Error: ${(e as Error).message}`,
+      `Cannot reach backend at ${BASE}. Make sure the PHP server is running. Error: ${(e as Error).message}`,
     );
   }
   const text = await res.text();
