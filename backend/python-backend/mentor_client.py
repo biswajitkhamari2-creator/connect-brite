@@ -20,7 +20,28 @@ def generate_mentor_reply(messages: list, system_prompt: str) -> str:
         clean_model = OLLAMA_MODEL.strip().replace("\ufeff", "").replace("\u200b", "")
         logger.info(f"Routing request to Ollama ({clean_model}) at {chat_url}")
         
+        # Perform Google search verification via Firecrawl for the user's latest query
+        search_context = ""
+        user_queries = [m for m in messages if m.get("role") == "user" or "role" not in m]
+        if user_queries:
+            latest_query = user_queries[-1].get("content", "")
+            if latest_query:
+                # Clean up query text for better search performance (keep first 15 words)
+                clean_query = " ".join(latest_query.split()[:15])
+                from search import search_with_firecrawl_or_fallback
+                search_context = search_with_firecrawl_or_fallback(clean_query, max_results=3)
+
         api_messages = [{"role": "system", "content": system_prompt}]
+        
+        # Inject Google Search verification context to the first prompt or system instruction
+        if search_context:
+            verification_note = (
+                f"\n\n[Google Search Verification Context (Real-time Facts)]:\n{search_context}\n"
+                "IMPORTANT: Verify facts, names, dates, and titles against this context. "
+                "Ensure your response is accurate, fast, and aligns directly with these validated points."
+            )
+            api_messages[0]["content"] += verification_note
+
         for msg in messages:
             role = msg.get("role", "user")
             if role not in ["user", "assistant", "system"]:
@@ -71,7 +92,28 @@ def generate_mentor_reply_stream(messages: list, system_prompt: str):
         clean_model = OLLAMA_MODEL.strip().replace("\ufeff", "").replace("\u200b", "")
         logger.info(f"Routing streaming request to Ollama ({clean_model}) at {chat_url}")
         
+        # Perform Google search verification via Firecrawl for the user's latest query
+        search_context = ""
+        user_queries = [m for m in messages if m.get("role") == "user" or "role" not in m]
+        if user_queries:
+            latest_query = user_queries[-1].get("content", "")
+            if latest_query:
+                # Clean up query text for better search performance (keep first 15 words)
+                clean_query = " ".join(latest_query.split()[:15])
+                from search import search_with_firecrawl_or_fallback
+                search_context = search_with_firecrawl_or_fallback(clean_query, max_results=3)
+
         api_messages = [{"role": "system", "content": system_prompt}]
+        
+        # Inject Google Search verification context to the first prompt or system instruction
+        if search_context:
+            verification_note = (
+                f"\n\n[Google Search Verification Context (Real-time Facts)]:\n{search_context}\n"
+                "IMPORTANT: Verify facts, names, dates, and titles against this context. "
+                "Ensure your response is accurate, fast, and aligns directly with these validated points."
+            )
+            api_messages[0]["content"] += verification_note
+
         for msg in messages:
             role = msg.get("role", "user")
             if role not in ["user", "assistant", "system"]:
