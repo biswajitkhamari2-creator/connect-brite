@@ -45,9 +45,9 @@ def search_ddg(query: str, max_results: int = 3) -> str:
 
 def search_with_firecrawl_or_fallback(query: str, max_results: int = 3) -> str:
     import os
-    firecrawl_key = os.getenv("FIRECRAWL_API_KEY", "").strip()
+    firecrawl_key = (os.getenv("FIRECRAWL_API_KEY") or os.getenv("FIRECRAWAL_API_KEY") or "").strip()
     if not firecrawl_key:
-        logger.info("FIRECRAWL_API_KEY not found. Falling back to DuckDuckGo search.")
+        logger.info("Firecrawl API Key not found. Falling back to DuckDuckGo search.")
         return search_ddg(query, max_results)
         
     try:
