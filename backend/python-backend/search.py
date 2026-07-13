@@ -177,9 +177,9 @@ def search_with_firecrawl_or_fallback(query: str, max_results: int = 3) -> str:
         if res: return res
 
     # 5. Firecrawl
-    firecrawl_key = (os.getenv("FIRECRAWL_API_KEY") or os.getenv("FIRECRAWAL_API_KEY") or "").strip()
+    firecrawl_key = (os.getenv("FIRECRAWL_API_KEY") or os.getenv("FIRECRAWAL_API_KEY") or os.getenv("FIRECRAWL_API") or "").strip()
     if firecrawl_key:
-        logger.info(f"Searching via Firecrawl for: '{query}'")
+        logger.info(f"Searching via Firecrawl for: '{query}' (key ends in ...{firecrawl_key[-4:] if len(firecrawl_key) > 4 else ''})")
         try:
             url = "https://api.firecrawl.dev/v1/search"
             headers = {
@@ -190,9 +190,11 @@ def search_with_firecrawl_or_fallback(query: str, max_results: int = 3) -> str:
                 "query": query,
                 "limit": max_results
             }
-            response = requests.post(url, json=payload, headers=headers, timeout=10)
+            response = requests.post(url, json=payload, headers=headers, timeout=15)
+            logger.info(f"Firecrawl Search response status: {response.status_code}")
             if response.status_code == 200:
                 data = response.json()
+                logger.info(f"RAW Firecrawl Response: {data}")
                 if data.get("success") and data.get("data"):
                     snippets = []
                     for idx, item in enumerate(data["data"][:max_results]):
@@ -203,6 +205,10 @@ def search_with_firecrawl_or_fallback(query: str, max_results: int = 3) -> str:
                         snippets.append(f"Result {idx+1}: {title} ({url_src})\nSnippet: {snippet_clean}")
                     if snippets:
                         return "\n\n".join(snippets)
+                else:
+                    logger.warning("Firecrawl responded successfully but returned no data.")
+            else:
+                logger.error(f"Firecrawl failed with status code {response.status_code}: {response.text}")
         except Exception as e:
             logger.warning(f"Firecrawl search failed: {e}")
 

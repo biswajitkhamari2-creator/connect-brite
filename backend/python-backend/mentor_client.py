@@ -127,6 +127,8 @@ def generate_mentor_reply_stream(messages: list, system_prompt: str, provider: s
                     role = "user"
                 api_messages.append({"role": role, "content": msg.get("content", "")})
                 
+            logger.info(f"Ollama/LLM Request messages payload:\n{json.dumps(api_messages, indent=2)}")
+
             payload = {
                 "model": clean_model,
                 "messages": api_messages,
@@ -194,6 +196,8 @@ def generate_mentor_reply_stream(messages: list, system_prompt: str, provider: s
                     role = "user"
                 api_messages.append({"role": role, "content": msg.get("content", "")})
                 
+            logger.info(f"Gemini Request messages payload:\n{json.dumps(api_messages, indent=2)}")
+
             payload = {
                 "model": "gemini-1.5-flash",
                 "messages": api_messages,
